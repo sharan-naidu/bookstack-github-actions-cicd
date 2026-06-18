@@ -4,4 +4,4 @@ LABEL maintainer="sharanketon"
 LABEL project="bookstack-cicd"
 LABEL version="1.0"
 
-COPY lang/en/auth.php /app/www/lang/en/auth.php
+COPY lang/en/ /app/www/lang/en/

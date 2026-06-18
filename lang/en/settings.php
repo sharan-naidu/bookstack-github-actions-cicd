@@ -1,7 +1,7 @@
 <?php
 /**
  * Settings text strings
- * Contains all text strings used in the general settings sections of BookStack
+ * Contains all text strings used in the general settings sections of BookStacks
  * including users and roles.
  */
 return [
@@ -19,7 +19,7 @@ return [
     'app_name_desc' => 'This name is shown in the header and in any system-sent emails.',
     'app_name_header' => 'Show name in header',
     'app_public_access' => 'Public Access',
-    'app_public_access_desc' => 'Enabling this option will allow visitors, that are not logged-in, to access content in your BookStack instance.',
+    'app_public_access_desc' => 'Enabling this option will allow visitors, that are not logged-in, to access content in your BookStacks instance.',
     'app_public_access_desc_guest' => 'Access for public visitors can be controlled through the "Guest" user.',
     'app_public_access_toggle' => 'Allow public access',
     'app_public_viewing' => 'Allow public viewing?',
@@ -229,7 +229,7 @@ return [
     'users_send_invite_text' => 'You can choose to send this user an invitation email which allows them to set their own password otherwise you can set their password yourself.',
     'users_send_invite_option' => 'Send user invite email',
     'users_external_auth_id' => 'External Authentication ID',
-    'users_external_auth_id_desc' => 'When an external authentication system is in use (such as SAML2, OIDC or LDAP) this is the ID which links this BookStack user to the authentication system account. You can ignore this field if using the default email-based authentication.',
+    'users_external_auth_id_desc' => 'When an external authentication system is in use (such as SAML2, OIDC or LDAP) this is the ID which links this BookStacks user to the authentication system account. You can ignore this field if using the default email-based authentication.',
     'users_password_warning' => 'Only fill the below if you would like to change the password for this user.',
     'users_system_public' => 'This user represents any guest users that visit your instance. It cannot be used to log in but is assigned automatically.',
     'users_delete' => 'Delete User',
@@ -255,7 +255,7 @@ return [
     'users_social_connected' => ':socialAccount account was successfully attached to your profile.',
     'users_social_disconnected' => ':socialAccount account was successfully disconnected from your profile.',
     'users_api_tokens' => 'API Tokens',
-    'users_api_tokens_desc' => 'Create and manage the access tokens used to authenticate with the BookStack REST API. Permissions for the API are managed via the user that the token belongs to.',
+    'users_api_tokens_desc' => 'Create and manage the access tokens used to authenticate with the BookStacks REST API. Permissions for the API are managed via the user that the token belongs to.',
     'users_api_tokens_none' => 'No API tokens have been created for this user',
     'users_api_tokens_create' => 'Create Token',
     'users_api_tokens_expires' => 'Expires',
@@ -317,8 +317,8 @@ return [
 
     // Licensing
     'licenses' => 'Licenses',
-    'licenses_desc' => 'This page details license information for BookStack in addition to the projects & libraries that are used within BookStack. Many projects listed may only be used in a development context.',
-    'licenses_bookstack' => 'BookStack License',
+    'licenses_desc' => 'This page details license information for BookStacks in addition to the projects & libraries that are used within BookStacks. Many projects listed may only be used in a development context.',
+    'licenses_bookstack' => 'BookStacks License',
     'licenses_php' => 'PHP Library Licenses',
     'licenses_js' => 'JavaScript Library Licenses',
     'licenses_other' => 'Other Licenses',
