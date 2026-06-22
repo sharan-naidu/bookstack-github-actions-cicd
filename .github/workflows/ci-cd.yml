@@ -11,22 +11,24 @@ env:
 
 jobs:
   versioning:
-    name: "Versioning Automation"
-    runs-on: ubuntu-latest
-    outputs:
-      image_tag: ${{ steps.version.outputs.image_tag }}
-    steps:
-      - name: "Checkout Source Code"
-        uses: actions/checkout@v6
+  name: "Versioning Automation"
+  runs-on: ubuntu-latest
+  outputs:
+    image_tag: ${{ steps.gitversion.outputs.semVer }}
 
-      - name: "Generate Version"
-        id: version
-        run: |
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          IMAGE_TAG="v2026.06.${{ github.run_number }}-$SHORT_SHA"
-          echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
-          echo "Generated version: $IMAGE_TAG"
+  steps:
+    - name: Checkout Source Code
+      uses: actions/checkout@v5
+      with:
+        fetch-depth: 0
 
+    - name: Install GitVersion
+      uses: gittools/actions/gitversion/setup@v3.2.1
+
+    - name: Determine Version
+      id: gitversion
+      uses: gittools/actions/gitversion/execute@v3.2.1
+ 
   unit-tests:
     name: "Unit Test Cases"
     runs-on: ubuntu-latest
