@@ -12,7 +12,7 @@ env:
 jobs:
   versioning:
     name: Versioning Automation
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     outputs:
       image_tag: ${{ steps.version.outputs.version }}
 
@@ -34,7 +34,7 @@ jobs:
 
   unit-tests:
     name: Unit Test Cases
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs:
       - versioning
 
@@ -62,7 +62,7 @@ jobs:
 
   build-and-push:
     name: Build and Push
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs:
       - versioning
       - unit-tests
@@ -99,7 +99,7 @@ jobs:
 
   container-security-scan:
     name: Container Security Scanning
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs:
       - versioning
       - build-and-push
@@ -115,7 +115,7 @@ jobs:
 
   slack-notification:
     name: Slack Notification
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs:
       - versioning
       - unit-tests
