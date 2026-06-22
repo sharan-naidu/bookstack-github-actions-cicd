@@ -14,23 +14,19 @@ jobs:
     name: Versioning Automation
     runs-on: ubuntu-latest
     outputs:
-      image_tag: ${{ steps.version.outputs.version }}
+      image_tag: ${{ steps.version.outputs.image_tag }}
 
     steps:
       - name: Checkout Source Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
-      - name: Generate Semantic Version
+      - name: Generate Version
         id: version
-        uses: PaulHatch/semantic-version@v5.4.0
-        with:
-          tag_prefix: "v"
-          major_pattern: "BREAKING CHANGE"
-          minor_pattern: "feat:"
-          version_format: "${major}.${minor}.${patch}-${increment}"
-
-      - name: Show Version
-        run: echo "Generated version is ${{ steps.version.outputs.version }}"
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          IMAGE_TAG="v1.0.${{ github.run_number }}-$SHORT_SHA"
+          echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+          echo "Generated version: $IMAGE_TAG"
 
   unit-tests:
     name: Unit Test Cases
@@ -40,7 +36,7 @@ jobs:
 
     steps:
       - name: Checkout Source Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup PHP Environment
         uses: shivammathur/setup-php@v2
@@ -69,7 +65,7 @@ jobs:
 
     steps:
       - name: Checkout Source Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -131,3 +127,4 @@ jobs:
           SLACK_TITLE: BookStack Marketplace CI/CD
           SLACK_MESSAGE: "Build completed. Version: ${{ needs.versioning.outputs.image_tag }} | Image: ${{ env.IMAGE_NAME }}"
           SLACK_COLOR: good
+
