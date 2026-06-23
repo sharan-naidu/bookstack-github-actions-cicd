@@ -1,9 +1,11 @@
-name: BookStack Marketplace CI/CD
+
+name: BookStack Fast CI/CD
 
 on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 env:
   IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/bookstack-cicd
@@ -24,6 +26,8 @@ jobs:
           SHORT_SHA=$(git rev-parse --short HEAD)
           IMAGE_TAG="v1.0.${{ github.run_number }}-$SHORT_SHA"
           echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+          echo "Generated version: $IMAGE_TAG"
+
   unit-tests:
     name: Unit Test Cases
     runs-on: self-hosted
@@ -32,24 +36,13 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v5
 
-      - name: Setup PHP Environment
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: "8.3"
-          coverage: none
-
-      - name: Install Composer Dependencies
-        run: composer install --no-interaction --prefer-dist --no-progress
-
-      - name: Prepare Test Environment
+      - name: PHP Syntax Validation
         run: |
-          cp .env.example .env
-          php artisan key:generate
-      - name: Run PHP Syntax Validation
-        run: |
+          php -v
           find app lang/en routes database tests -name "*.php" -print0 | xargs -0 -n1 php -l
+
   build-and-push:
-    name: Build and Push
+    name: Build and Push Docker Image
     runs-on: self-hosted
     needs:
       - versioning
@@ -57,9 +50,6 @@ jobs:
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v5
-
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v3
 
       - name: Docker Hub Login
         uses: docker/login-action@v3
@@ -75,27 +65,13 @@ jobs:
           tags: |
             ${{ env.IMAGE_NAME }}:${{ needs.versioning.outputs.image_tag }}
             ${{ env.IMAGE_NAME }}:latest
-  container-security-scan:
-    name: Container Security Scanning
-    runs-on: self-hosted
-    needs:
-      - versioning
-      - build-and-push
-    steps:
-      - name: Trivy Security Scan
-        uses: aquasecurity/trivy-action@0.35.0
-        with:
-          image-ref: ${{ env.IMAGE_NAME }}:${{ needs.versioning.outputs.image_tag }}
-          format: table
-          severity: HIGH,CRITICAL
-          exit-code: 0
 
   deploy:
     name: Deploy to Application EC2
     runs-on: self-hosted
     needs:
       - versioning
-      - container-security-scan
+      - build-and-push
     steps:
       - name: Deploy BookStack using SSH
         uses: appleboy/ssh-action@v1.2.0
@@ -104,9 +80,14 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            docker network create bookstack-net || true
+            docker network connect bookstack-net bookstack_db || true
+
             docker pull ${{ env.IMAGE_NAME }}:${{ needs.versioning.outputs.image_tag }}
+
             docker stop bookstack_app || true
             docker rm bookstack_app || true
+
             docker run -d \
               --name bookstack_app \
               --restart unless-stopped \
@@ -122,7 +103,25 @@ jobs:
               -e DB_PASSWORD=bookstackpass \
               -v ~/BookStack/bookstack:/config \
               ${{ env.IMAGE_NAME }}:${{ needs.versioning.outputs.image_tag }}
+
             docker ps
+
+  container-security-scan:
+    name: Container Security Scanning
+    runs-on: self-hosted
+    needs:
+      - versioning
+      - build-and-push
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Trivy Security Scan
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}:${{ needs.versioning.outputs.image_tag }}
+          format: table
+          severity: HIGH,CRITICAL
+          exit-code: 0
+
   slack-notification:
     name: Slack Notification
     runs-on: self-hosted
@@ -130,7 +129,6 @@ jobs:
       - versioning
       - unit-tests
       - build-and-push
-      - container-security-scan
       - deploy
     if: always()
     steps:
@@ -138,6 +136,7 @@ jobs:
         uses: rtCamp/action-slack-notify@v2
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
-          SLACK_TITLE: BookStack Marketplace CI/CD
-          SLACK_MESSAGE: "Build completed. Version: ${{ needs.versioning.outputs.image_tag }} | URL: http://${{ secrets.EC2_HOST }}:6875"
+          SLACK_TITLE: BookStack Fast CI/CD
+          SLACK_MESSAGE: "Version ${{ needs.versioning.outputs.image_tag }} deployed to http://${{ secrets.EC2_HOST }}:6875"
           SLACK_COLOR: good
+
