@@ -24,6 +24,7 @@ jobs:
           SHORT_SHA=$(git rev-parse --short HEAD)
           IMAGE_TAG="v1.0.${{ github.run_number }}-$SHORT_SHA"
           echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+          echo "Generated version: $IMAGE_TAG"
 
   unit-tests:
     name: Unit Test Cases
@@ -103,19 +104,25 @@ jobs:
           exit-code: 0
 
   deploy:
-    name: Deploy Application
+    name: Deploy to Application EC2
     runs-on: self-hosted
     needs:
       - versioning
       - container-security-scan
     steps:
-      - name: Deploy BookStack
-        run: |
-          cd ~/BookStack
-          docker pull ${{ env.IMAGE_NAME }}:${{ needs.versioning.outputs.image_tag }}
-          docker compose down
-          docker compose up -d --force-recreate
-          docker ps
+      - name: Deploy BookStack using SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd ~/BookStack
+            sed -i 's|image: .*bookstack-cicd.*|image: ${{ env.IMAGE_NAME }}:${{ needs.versioning.outputs.image_tag }}|' docker-compose.yml
+            docker compose pull
+            docker compose down
+            docker compose up -d --force-recreate
+            docker ps
 
   slack-notification:
     name: Slack Notification
@@ -133,5 +140,5 @@ jobs:
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
           SLACK_TITLE: BookStack Marketplace CI/CD
-          SLACK_MESSAGE: "Build completed. Version: ${{ needs.versioning.outputs.image_tag }} | URL: http://34.239.94.177:6875"
+          SLACK_MESSAGE: "Build completed. Version: ${{ needs.versioning.outputs.image_tag }} | URL: http://${{ secrets.EC2_HOST }}:6875"
           SLACK_COLOR: good
