@@ -149,5 +149,5 @@ jobs:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
           SLACK_TITLE: BookStack Marketplace CI/CD
           SLACK_MESSAGE: "Build completed. Version: ${{ needs.versioning.outputs.image_tag }} | URL: http://${{ secrets.EC2_HOST }}:6875"
-          SLACK_COLOR: good
+          SLACK_COLOR: good 
 
