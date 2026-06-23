@@ -1,5 +1,5 @@
 
-name: BookStack Marketplace CI/CD
+name: BookStack CI/CD Pipeline
 
 on:
   push:
@@ -19,12 +19,13 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v5
 
-      - name: Generate Version
+      - name: Generate Image Version
         id: version
         run: |
           SHORT_SHA=$(git rev-parse --short HEAD)
           IMAGE_TAG="v1.0.${{ github.run_number }}-$SHORT_SHA"
           echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+          echo "Generated version: $IMAGE_TAG"
 
   unit-tests:
     name: Unit Test Cases
@@ -34,26 +35,18 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v5
 
-      - name: Setup PHP Environment
+      - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: "8.3"
           coverage: none
 
-      - name: Install Composer Dependencies
-        run: composer install --no-interaction --prefer-dist --no-progress
-
-      - name: Prepare Test Environment
-        run: |
-          cp .env.example .env
-          php artisan key:generate
-
-      - name: Run PHP Syntax Validation
+      - name: PHP Syntax Validation
         run: |
           find app lang/en routes database tests -name "*.php" -print0 | xargs -0 -n1 php -l
 
   build-and-push:
-    name: Build and Push
+    name: Build and Push Docker Image
     runs-on: self-hosted
     needs:
       - versioning
@@ -109,6 +102,9 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            docker network create bookstack-net || true
+            docker network connect bookstack-net bookstack_db || true
+
             docker pull ${{ env.IMAGE_NAME }}:${{ needs.versioning.outputs.image_tag }}
 
             docker stop bookstack_app || true
@@ -147,7 +143,7 @@ jobs:
         uses: rtCamp/action-slack-notify@v2
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
-          SLACK_TITLE: BookStack Marketplace CI/CD
-          SLACK_MESSAGE: "Build completed. Version: ${{ needs.versioning.outputs.image_tag }} | URL: http://${{ secrets.EC2_HOST }}:6875"
+          SLACK_TITLE: BookStack CI/CD Pipeline
+          SLACK_MESSAGE: "Version ${{ needs.versioning.outputs.image_tag }} deployed to http://${{ secrets.EC2_HOST }}:6875"
           SLACK_COLOR: good
 
