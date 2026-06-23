@@ -103,26 +103,40 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: 0
 
-  deploy:
-    name: Deploy to Application EC2
-    runs-on: self-hosted
-    needs:
-      - versioning
-      - container-security-scan
-    steps:
-      - name: Deploy BookStack using SSH
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            cd ~/BookStack
-            sed -i 's|image: .*bookstack-cicd.*|image: ${{ env.IMAGE_NAME }}:${{ needs.versioning.outputs.image_tag }}|' docker-compose.yml
-            docker compose pull
-            docker compose down
-            docker compose up -d --force-recreate
-            docker ps
+ deploy:
+  name: Deploy to Application EC2
+  runs-on: self-hosted
+  needs:
+    - versioning
+    - container-security-scan
+
+  steps:
+    - name: Deploy BookStack using SSH
+      uses: appleboy/ssh-action@v1.2.0
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          docker pull ${{ env.IMAGE_NAME }}:${{ needs.versioning.outputs.image_tag }}
+
+          docker stop bookstack_app || true
+          docker rm bookstack_app || true
+
+          docker run -d \
+            --name bookstack_app \
+            --restart unless-stopped \
+            -p 6875:80 \
+            -e APP_URL=http://${{ secrets.EC2_HOST }}:6875 \
+            -e DB_HOST=mariadb \
+            -e DB_PORT=3306 \
+            -e DB_DATABASE=bookstack \
+            -e DB_USERNAME=bookstack \
+            -e DB_PASSWORD=bookstackpass \
+            -v ~/BookStack/bookstack:/config \
+            ${{ env.IMAGE_NAME }}:${{ needs.versioning.outputs.image_tag }}
+
+          docker ps
 
   slack-notification:
     name: Slack Notification
