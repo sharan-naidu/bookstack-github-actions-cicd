@@ -40,6 +40,14 @@ jobs:
           php-version: "8.3"
           coverage: none
 
+      - name: Install Composer Dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Prepare Test Environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
       - name: Run PHP Syntax Validation
         run: |
           find app lang/en routes database tests -name "*.php" -print0 | xargs -0 -n1 php -l
@@ -72,12 +80,27 @@ jobs:
             ${{ env.IMAGE_NAME }}:${{ needs.versioning.outputs.image_tag }}
             ${{ env.IMAGE_NAME }}:latest
 
+  container-security-scan:
+    name: Container Security Scanning
+    runs-on: self-hosted
+    needs:
+      - versioning
+      - build-and-push
+    steps:
+      - name: Trivy Security Scan
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}:${{ needs.versioning.outputs.image_tag }}
+          format: table
+          severity: HIGH,CRITICAL
+          exit-code: 0
+
   deploy:
     name: Deploy to Application EC2
     runs-on: self-hosted
     needs:
       - versioning
-      - build-and-push
+      - container-security-scan
     steps:
       - name: Deploy BookStack using SSH
         uses: appleboy/ssh-action@v1.2.0
@@ -86,10 +109,6 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            docker network create bookstack-net || true
-
-            docker network connect bookstack-net bookstack_db || true
-
             docker pull ${{ env.IMAGE_NAME }}:${{ needs.versioning.outputs.image_tag }}
 
             docker stop bookstack_app || true
@@ -113,21 +132,6 @@ jobs:
 
             docker ps
 
-  container-security-scan:
-    name: Container Security Scanning
-    runs-on: self-hosted
-    needs:
-      - versioning
-      - build-and-push
-    steps:
-      - name: Trivy Security Scan
-        uses: aquasecurity/trivy-action@0.35.0
-        with:
-          image-ref: ${{ env.IMAGE_NAME }}:${{ needs.versioning.outputs.image_tag }}
-          format: table
-          severity: HIGH,CRITICAL
-          exit-code: 0
-
   slack-notification:
     name: Slack Notification
     runs-on: self-hosted
@@ -135,8 +139,8 @@ jobs:
       - versioning
       - unit-tests
       - build-and-push
-      - deploy
       - container-security-scan
+      - deploy
     if: always()
     steps:
       - name: Send Slack Notification
