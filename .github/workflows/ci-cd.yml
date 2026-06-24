@@ -112,7 +112,6 @@ jobs:
     needs:
       - versioning
       - build-and-push
-    if: github.event_name == 'workflow_dispatch'
     steps:
       - name: Trivy Security Scan
         uses: aquasecurity/trivy-action@0.35.0
